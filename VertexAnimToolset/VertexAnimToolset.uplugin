@@ -1,0 +1,48 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "3.0",
+	"FriendlyName": "Vertex Anim Toolset V3",
+	"Description": "Tools for baking Skeletal Mesh animation into textures to animate meshes through the material shader",
+	"Category": "Rendering",
+	"CreatedBy": "Rexocrates",
+	"CreatedByURL": "https://github.com/Rexocrates",
+	"DocsURL": "https://github.com/Rexocrates/Vertex_Anim_Toolset/blob/main/Vertex%20Anim%20Toolset%20Documentation.pdf",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/d998b22372a44975b312e85cf663bbab",
+	"SupportURL": "https://github.com/Rexocrates/Vertex_Anim_Toolset/issues",
+	"EngineVersion": "4.26.0",
+	"CanContainContent": true,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "VertexAnimToolset",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PostConfigInit",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Win32",
+				"Mac",
+				"Linux",
+				"PS4",
+				"XboxOne",
+				"Android",
+				"IOS"
+			]
+		},
+		{
+			"Name": "VertexAnimToolsetEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Win32",
+				"Mac",
+				"Linux",
+				"PS4",
+				"XboxOne",
+				"Android",
+				"IOS"
+			]
+		}
+	]
+}
