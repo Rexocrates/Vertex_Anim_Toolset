@@ -12,7 +12,7 @@
 	"SupportURL": "https://github.com/Rexocrates/Vertex_Anim_Toolset/issues",
 	"EngineVersion": "5.0.0",
 	"CanContainContent": true,
-	"Installed": true,
+	"Installed": false,
 	"Modules": [
 		{
 			"Name": "VertexAnimToolset",
