@@ -12,37 +12,19 @@
 	"SupportURL": "https://github.com/Rexocrates/Vertex_Anim_Toolset/issues",
 	"EngineVersion": "4.26.0",
 	"CanContainContent": true,
-	"Installed": true,
+	"Installed": false,
 	"Modules": [
 		{
 			"Name": "VertexAnimToolset",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "PostConfigInit",
-			"WhitelistPlatforms": [
-				"Win64",
-				"Win32",
-				"Mac",
-				"Linux",
-				"PS4",
-				"XboxOne",
-				"Android",
-				"IOS"
-			]
+			"BlacklistPlatforms": []
 		},
 		{
 			"Name": "VertexAnimToolsetEditor",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64",
-				"Win32",
-				"Mac",
-				"Linux",
-				"PS4",
-				"XboxOne",
-				"Android",
-				"IOS"
-			]
+			"BlacklistPlatforms": []
 		}
 	]
 }
