@@ -83,7 +83,7 @@
 #include "Developer/AssetTools/Public/IAssetTools.h"
 #include "Developer/AssetTools/Public/AssetToolsModule.h"
 
-#include "Toolkits/AssetEditorManager.h"
+#include "Toolkits/ToolkitManager.h"
 #include "Dialogs/DlgPickAssetPath.h"
 #include "AssetRegistryModule.h"
 
@@ -336,7 +336,8 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 		// Copy skinned vertex positions
 		for (int32 VertIndex = 0; VertIndex < FinalVertices.Num(); ++VertIndex)
 		{
-			RawMesh.VertexPositions.Add(InComponentToWorld.TransformPosition(FinalVertices[VertIndex].Position));
+			FVector4d vert = InComponentToWorld.TransformPosition(FVector(FinalVertices[VertIndex].Position));
+			RawMesh.VertexPositions.Add(FVector3f(vert.X, vert.Y, vert.Z));
 		}
 
 		const uint32 NumTexCoords = FMath::Min(LODData.StaticVertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords(), (uint32)MAX_MESH_TEXTURE_COORDS);
@@ -362,9 +363,9 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 					const FVector4 UnpackedTangentZ = SkinnedVertex.TangentZ.ToFVector4();
 					const FVector TangentY = (TangentZ ^ TangentX).GetSafeNormal() * UnpackedTangentZ.W;
 
-					RawMesh.WedgeTangentX.Add(TangentX);
-					RawMesh.WedgeTangentY.Add(TangentY);
-					RawMesh.WedgeTangentZ.Add(TangentZ);
+					RawMesh.WedgeTangentX.Add(FVector3f(TangentX));
+					RawMesh.WedgeTangentY.Add(FVector3f(TangentY));
+					RawMesh.WedgeTangentZ.Add(FVector3f(TangentZ));
 
 					for (uint32 TexCoordIndex = 0; TexCoordIndex < MAX_MESH_TEXTURE_COORDS; TexCoordIndex++)
 					{
@@ -394,7 +395,7 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 				// use the remapping of material indices if there is a valid value
 				if (SrcLODInfo.LODMaterialMap.IsValidIndex(SectionIndex) && SrcLODInfo.LODMaterialMap[SectionIndex] != INDEX_NONE)
 				{
-					MaterialIndex = FMath::Clamp<int32>(SrcLODInfo.LODMaterialMap[SectionIndex], 0, InSkinnedMeshComponent->SkeletalMesh->Materials.Num());
+					MaterialIndex = FMath::Clamp<int32>(SrcLODInfo.LODMaterialMap[SectionIndex], 0, InSkinnedMeshComponent->SkeletalMesh->GetMaterials().Num());
 				}
 
 				// copy face info
@@ -474,7 +475,7 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			}
 			else if (false)//(IsValidStaticMeshComponent(StaticMeshComponent))
 			{
-				OverallMaxLODs = FMath::Max(StaticMeshComponent->GetStaticMesh()->RenderData->LODResources.Num(), OverallMaxLODs);
+				OverallMaxLODs = FMath::Max(StaticMeshComponent->GetStaticMesh()->GetRenderData()->LODResources.Num(), OverallMaxLODs);
 			}
 		}
 
@@ -546,7 +547,7 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			StaticMesh = NewObject<UStaticMesh>(Package, *MeshName, RF_Public | RF_Standalone);
 			StaticMesh->InitResources();
 
-			StaticMesh->LightingGuid = FGuid::NewGuid();
+			StaticMesh->SetLightingGuid(FGuid::NewGuid());
 
 			// Determine which texture coordinate map should be used for storing/generating the lightmap UVs
 			const uint32 LightMapIndex = FMath::Min(MaxInUseTextureCoordinate + 1, (uint32)MAX_MESH_TEXTURE_COORDS - 1);
@@ -572,7 +573,11 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			// Copy materials to new mesh 
 			for (UMaterialInterface* Material : Materials)
 			{
-				StaticMesh->StaticMaterials.Add(FStaticMaterial(Material));
+				//StaticMesh->GetStaticMaterials().Add(FStaticMaterial(Material)); // Can we do this? Unsure of the async implication.
+
+				auto materials = StaticMesh->GetStaticMaterials();
+				materials.Add(FStaticMaterial(Material));
+				StaticMesh->SetStaticMaterials(materials);
 			}
 
 			//Set the Imported version before calling the build
@@ -650,7 +655,7 @@ void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int
 				for (int32 WedgeIndex = 0; WedgeIndex < Mesh.WedgeIndices.Num(); ++WedgeIndex)
 				{
 					int32 VertID = Mesh.WedgeIndices[WedgeIndex];
-					FVector Position = Mesh.VertexPositions[VertID];
+					FVector Position = FVector(Mesh.VertexPositions[VertID]);
 
 					for (uint32 TexCoordIndex = 0; TexCoordIndex < MAX_MESH_TEXTURE_COORDS; TexCoordIndex++)
 					{
@@ -662,7 +667,7 @@ void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int
 								if (Mesh.WedgeTexCoords[TexCoordIndex].Num() != Mesh.WedgeIndices.Num())
 									Mesh.WedgeTexCoords[TexCoordIndex].SetNum(Mesh.WedgeIndices.Num());
 
-								Mesh.WedgeTexCoords[TexCoordIndex][WedgeIndex] = UVs[PaintingMeshLODIndex][VertID];
+								Mesh.WedgeTexCoords[TexCoordIndex][WedgeIndex] = FVector2f(UVs[PaintingMeshLODIndex][VertID]);
 							}
 							else if(TexCoordIndex >= NumUVChannels)
 							{
@@ -725,7 +730,7 @@ void FVertexAnimUtils::VATColorsToStaticMeshLODs(UStaticMesh* StaticMesh, const 
 				for (int32 WedgeIndex = 0; WedgeIndex < Mesh.WedgeIndices.Num(); ++WedgeIndex)
 				{
 					int32 VertID = Mesh.WedgeIndices[WedgeIndex];
-					FVector Position = Mesh.VertexPositions[VertID];
+					FVector Position = FVector(Mesh.VertexPositions[VertID]);
 					Mesh.WedgeColors[WedgeIndex] = Colors[PaintingMeshLODIndex][VertID];
 				}
 
