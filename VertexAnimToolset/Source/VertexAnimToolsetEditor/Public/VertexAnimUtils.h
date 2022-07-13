@@ -3,24 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-
-#include "Input/Reply.h"
-#include "Widgets/DeclarativeSyntaxSupport.h"
-#include "Widgets/SCompoundWidget.h"
-#include "Engine/Texture2D.h"
-#include "IDetailsView.h"
-
-
-#include "Layout/Visibility.h"
-#include "Widgets/SWidget.h"
-
-#include "IDetailCustomization.h"
-
-#include "Widgets/DeclarativeSyntaxSupport.h"
-#include "Input/Reply.h"
-#include "Widgets/SWindow.h"
-
 #include "ContentBrowserDelegates.h"
+#include "Input/Reply.h"
+#include "Widgets/DeclarativeSyntaxSupport.h"
+#include "Widgets/SWindow.h"
 
 class UTextureRenderTarget2D;
 
@@ -92,7 +78,7 @@ public:
 	VERTEXANIMTOOLSETEDITOR_API const FText& GetAssetName();
 
 	/** Gets the resulting full asset path (path+'/'+name) */
-	VERTEXANIMTOOLSETEDITOR_API FText GetFullAssetPath();
+	VERTEXANIMTOOLSETEDITOR_API FText GetFullAssetPath() const;
 
 	void OnCheckedOnlyCreateStaticMesh(ECheckBoxState NewCheckedState);
 
@@ -103,7 +89,7 @@ public:
 		return bOnlyCreateStaticMesh;
 	}
 
-	bool Filter(const FAssetData& AssetData);
+	static bool Filter(const FAssetData& AssetData);
 
 	int32 ValidateProfile() const;
 
@@ -116,7 +102,7 @@ protected:
 	void OnNameChange(const FText& NewName, ETextCommit::Type CommitInfo);
 	FReply OnButtonClick(EAppReturnType::Type ButtonID);
 
-	bool ValidatePackage();
+	bool ValidatePackage() const;
 
 	EAppReturnType::Type UserResponse;
 

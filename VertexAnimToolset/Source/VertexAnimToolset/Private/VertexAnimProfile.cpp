@@ -2,14 +2,6 @@
 
 #include "VertexAnimProfile.h"
 
-#include "UObject/ObjectMacros.h"
-#include "Runtime/Engine/Classes/Engine/CanvasRenderTarget2D.h"
-
-#include "Runtime/Engine/Classes/Kismet/KismetRenderingLibrary.h"
-
-#include "Rendering/SkeletalMeshModel.h"
-
-
 int32 UVertexAnimProfile::CalcTotalNumOfFrames_Vert() const
 {
 	int32 Out = 0;

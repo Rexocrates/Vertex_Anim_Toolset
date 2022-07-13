@@ -2,106 +2,29 @@
 
 
 #include "VATEditorUtils.h"
-
-#include "IPersonaToolkit.h"
-#include "Rendering/SkeletalMeshModel.h"
-#include "Rendering/SkeletalMeshRenderData.h"
-
-#include "Animation/DebugSkelMeshComponent.h"
-
-
-#include "Textures/SlateIcon.h"
-#include "Styling/SlateTypes.h"
-#include "Framework/Commands/UIAction.h"
-#include "Framework/Commands/UICommandList.h"
-#include "Framework/MultiBox/MultiBoxExtender.h"
-#include "Framework/MultiBox/MultiBoxBuilder.h"
-
-#include "Engine/StaticMesh.h"
-#include "Materials/Material.h"
-#include "Materials/MaterialInstanceDynamic.h"
-
-#include "RawMesh.h"
-#include "StaticMeshResources.h"
-#include "MeshBuild.h"
-
-#include "Rendering/SkeletalMeshModel.h"
-#include "Rendering/SkeletalMeshRenderData.h"
-
-#include "Engine/SkeletalMesh.h"
+#include "AnimationRuntime.h"
+#include "AssetRegistryModule.h"
+#include "RenderingThread.h"
 #include "SkeletalRenderPublic.h"
+#include "StaticMeshResources.h"
+#include "VertexAnimProfile.h"
+#include "Animation/DebugSkelMeshComponent.h"
+#include "Developer/AssetTools/Public/AssetToolsModule.h"
+#include "Developer/AssetTools/Public/IAssetTools.h"
+#include "Dialogs/DlgPickAssetPath.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
+#include "Misc/MessageDialog.h"
+#include "Rendering/SkeletalMeshModel.h"
+#include "Rendering/SkeletalMeshRenderData.h"
 #include "Runtime/Engine/Private/SkeletalRenderCPUSkin.h"
 
-#include "Animation/MorphTarget.h"
-
-#include "Developer/AssetTools/Public/IAssetTools.h"
-#include "Developer/AssetTools/Public/AssetToolsModule.h"
-
-#include "Toolkits/AssetEditorManager.h"
-#include "Dialogs/DlgPickAssetPath.h"
-#include "AssetRegistryModule.h"
-
-#include "VertexAnimProfile.h"
-
-
-#include "Framework/Notifications/NotificationManager.h"
-#include "Widgets/Notifications/SNotificationList.h"
-
-#include "Engine.h"
-
-#include "Misc/FeedbackContext.h"
-#include "Misc/MessageDialog.h"
-
-#include "IPersonaPreviewScene.h"
-#include "AssetViewerSettings.h"
-#include "RenderingThread.h"
-
-#include "Components/PoseableMeshComponent.h"
-
-#include "AnimationRuntime.h"
-
 //--------------------------------------
-#include "Interfaces/IPluginManager.h"
-#include "Misc/Paths.h"
-#include "ShaderCore.h"
-
-#include "VertexAnimUtils.h"
-
-#include "Animation/AnimSequence.h"
-
-#include "Kismet/KismetRenderingLibrary.h"
-
-#include "PackageTools.h"
-
-#include "Animation/AnimSequence.h"
-
-#include "Rendering/SkinWeightVertexBuffer.h"
-
-
-#include "Misc/App.h"
-#include "RenderingThread.h"
-#include "GameFramework/PlayerController.h"
-#include "ContentStreaming.h"
-#include "DrawDebugHelpers.h"
-#include "UnrealEngine.h"
-#include "SkeletalRenderPublic.h"
-//#include "SkeletalRenderCPUSkin.h"
-//#include "SkeletalRenderGPUSkin.h"
-//#include "SkeletalRenderStatic.h"
-#include "Animation/AnimStats.h"
-#include "Engine/SkeletalMeshSocket.h"
-#include "PhysicsEngine/PhysicsAsset.h"
-#include "EngineGlobals.h"
-#include "PrimitiveSceneProxy.h"
-#include "Engine/CollisionProfile.h"
-#include "Rendering/SkinWeightVertexBuffer.h"
-#include "SkeletalMeshTypes.h"
-#include "Animation/MorphTarget.h"
-#include "AnimationRuntime.h"
-
-#include "Animation/AnimSingleNodeInstance.h"
-
 #include "MeshDescription.h"
+#include "PackageTools.h"
+#include "VertexAnimUtils.h"
+#include "Animation/AnimSingleNodeInstance.h"
+#include "Rendering/SkinWeightVertexBuffer.h"
 
 #define LOCTEXT_NAMESPACE "VATEditorUtils"
 
@@ -110,7 +33,7 @@ static void MapSkinVerts(
 	UVertexAnimProfile* InProfile, const TArray <FFinalSkinVertex>& SkinVerts,
 	TArray <int32>& UniqueVertsSourceID, TArray <FVector2D>& OutUVSet_Vert)
 {
-	TArray <FVector> UniqueVerts;
+	TArray <FVector3f> UniqueVerts;
 	TArray <int32> UniqueID;
 	UniqueID.SetNumZeroed(SkinVerts.Num());
 
@@ -143,21 +66,20 @@ static void MapSkinVerts(
 
 	if (InProfile->AutoSize)
 	{
-		int32 XSize = FMath::Min(InProfile->MaxWidth, (int32)FMath::RoundUpToPowerOfTwo(UniqueVerts.Num()));
-		InProfile->RowsPerFrame_Vert = FMath::CeilToInt((float)(UniqueVerts.Num()) / (float)(XSize));
+		const int32 XSize = FMath::Min(InProfile->MaxWidth, static_cast<int32>(FMath::RoundUpToPowerOfTwo(UniqueVerts.Num())));
+		InProfile->RowsPerFrame_Vert = FMath::CeilToInt(static_cast<float>(UniqueVerts.Num()) / static_cast<float>(XSize));
 		InProfile->OverrideSize_Vert = FIntPoint(
 			XSize,
 			FMath::RoundUpToPowerOfTwo(InProfile->CalcTotalRequiredHeight_Vert()));
 	}
 	else
 	{
-		InProfile->RowsPerFrame_Vert = //FMath::CeilToInt((float)(UniqueVerts.Num()) / (float)(InProfile->OverrideSize.X));
-			FMath::RoundUpToPowerOfTwo((float)(UniqueVerts.Num()) / (float)(InProfile->OverrideSize_Vert.X));
+		InProfile->RowsPerFrame_Vert = FMath::RoundUpToPowerOfTwo(static_cast<float>(UniqueVerts.Num()) / static_cast<float>(InProfile->OverrideSize_Vert.X));
 	}
 
 	const float XStep = 1.f / InProfile->OverrideSize_Vert.X;
 	const float YStep = 1.f / InProfile->OverrideSize_Vert.Y;
-	const FVector2D HalfStep = FVector2D(XStep, YStep) / 2;
+	
 	TArray <FVector2D> UniqueMappedUVs;
 	UniqueMappedUVs.SetNum(UniqueVerts.Num());
 
@@ -184,7 +106,7 @@ static void MapActiveBones(
 {
 	if (InProfile->AutoSize)
 	{
-		int32 XSize = FMath::Clamp((int32)FMath::RoundUpToPowerOfTwo(NumBones), 8, InProfile->MaxWidth);
+		const int32 XSize = FMath::Clamp(static_cast<int32>(FMath::RoundUpToPowerOfTwo(NumBones)), 8, InProfile->MaxWidth);
 		
 		InProfile->OverrideSize_Bone = FIntPoint(
 			XSize,
@@ -198,18 +120,11 @@ static void MapActiveBones(
 
 	for (int32 i = 0; i < NumBones; i++)
 	{
-		if (true)
-		{
-			// I SWITCHED THESE to have the UVs lined horizontally.
-			const int32 GridX = i % InProfile->OverrideSize_Bone.X;
-			const int32 GridY = i / InProfile->OverrideSize_Bone.X;
-			const FVector2D GridUV = FVector2D(GridX * XStep, GridY * YStep);
-			UniqueMappedUVs[i] = GridUV;
-		}
-		else
-		{
-			UniqueMappedUVs[i] = FVector2D();
-		}
+		// I SWITCHED THESE to have the UVs lined horizontally.
+		const int32 GridX = i % InProfile->OverrideSize_Bone.X;
+		const int32 GridY = i / InProfile->OverrideSize_Bone.X;
+		const FVector2D GridUV = FVector2D(GridX * XStep, GridY * YStep);
+		UniqueMappedUVs[i] = GridUV;
 	}
 
 	OutUVSet_Bone = UniqueMappedUVs;
@@ -234,8 +149,8 @@ static void SkinnedMeshVATData(
 
 	const int32 NumLODs = InSkinnedMeshComponent->GetNumLODs();
 
-	const auto& RefSkeleton = InSkinnedMeshComponent->SkeletalMesh->RefSkeleton;
-	const auto& GlobalRefSkeleton = InSkinnedMeshComponent->SkeletalMesh->Skeleton->GetReferenceSkeleton();
+	const auto& RefSkeleton = InSkinnedMeshComponent->SkeletalMesh->GetRefSkeleton();
+	const auto& GlobalRefSkeleton = InSkinnedMeshComponent->SkeletalMesh->GetSkeleton()->GetReferenceSkeleton();
 
 	TArray <FVector2D> GridUVs_Vert;
 	TArray <FVector2D> GridUVs_Bone;
@@ -270,8 +185,6 @@ static void SkinnedMeshVATData(
 	{
 		int32 LODIndexRead = FMath::Min(OverallLODIndex, NumLODs - 1);
 
-		FSkeletalMeshLODInfo& SrcLODInfo = *(InSkinnedMeshComponent->SkeletalMesh->GetLODInfo(LODIndexRead));
-
 		// Get the CPU skinned verts for this LOD, WAIT, if it changes LOD on each loop, does that not mean it changes??
 		TArray<FFinalSkinVertex> FinalVertices;
 		InSkinnedMeshComponent->GetCPUSkinnedVertices(FinalVertices, LODIndexRead);
@@ -296,15 +209,15 @@ static void SkinnedMeshVATData(
 
 			for (int32 o = 0; o < FinalVertices.Num(); o++)
 			{
-				const FVector Pos = FinalVertices[o].Position;
+				const FVector3f Pos = FinalVertices[o].Position;
 				float Lowest = MAX_FLT;
 				int32 WinnerID = INDEX_NONE;
 
 				for (int32 u = 0; u < UniqueSourceID.Num(); u++)
 				{
-					const FVector TargetPos = AnimMeshFinalVertices[UniqueSourceID[u]].Position;
+					const FVector3f TargetPos = AnimMeshFinalVertices[UniqueSourceID[u]].Position;
 
-					const float Dist = FVector::Dist(Pos, TargetPos);
+					const float Dist = FVector3f::Dist(Pos, TargetPos);
 					if (Dist < Lowest)
 					{
 						Lowest = Dist;
@@ -323,12 +236,10 @@ static void SkinnedMeshVATData(
 		FSkeletalMeshLODRenderData& LODData = SkeletalMeshRenderData.LODRenderData[LODIndexRead];
 
 		{
-			const FSkinWeightVertexBuffer& SkinWeightVertexBuffer = *LODData.GetSkinWeightVertexBuffer();
-
 			auto SkinData = LODData.GetSkinWeightVertexBuffer();
 			check(SkinData->GetNumVertices() == FinalVertices.Num());
 
-			for (int32 s = 0; s < (int32)SkinData->GetNumVertices(); s++)
+			for (int32 s = 0; s < static_cast<int32>(SkinData->GetNumVertices()); s++)
 			{
 				int32 SectionIndex;
 				int32 VertIndex;
@@ -352,15 +263,15 @@ static void SkinnedMeshVATData(
 				};
 
 				const float Sum =
-					((float)InfluenceWeights[0] / 255.f) + ((float)InfluenceWeights[1] / 255.f)
-					+ ((float)InfluenceWeights[2] / 255.f) + ((float)InfluenceWeights[3] / 255.f);
+					(static_cast<float>(InfluenceWeights[0]) / 255.f) + (static_cast<float>(InfluenceWeights[1]) / 255.f)
+					+ (static_cast<float>(InfluenceWeights[2]) / 255.f) + (static_cast<float>(InfluenceWeights[3]) / 255.f);
 				const float Rest = 1.f - Sum;
 
 				FLinearColor W = FLinearColor(
-					((float)InfluenceWeights[0] / 255.f) + Rest,
-					((float)InfluenceWeights[1] / 255.f),
-					((float)InfluenceWeights[2] / 255.f),
-					((float)InfluenceWeights[3] / 255.f));
+					(static_cast<float>(InfluenceWeights[0]) / 255.f) + Rest,
+					(static_cast<float>(InfluenceWeights[1]) / 255.f),
+					(static_cast<float>(InfluenceWeights[2]) / 255.f),
+					(static_cast<float>(InfluenceWeights[3]) / 255.f));
 
 
 				thisLODSkinWeightColor[s] = W.ToFColor(false);
@@ -436,7 +347,7 @@ void GatherAndBakeAllAnimVertData(
 	constexpr bool bRecreateRenderStateImmediately = true;
 	// 1º switch to CPU skinning
 	{
-		const int32 InLODIndex = 0;
+		constexpr int32 InLODIndex = 0;
 		{
 			if (USkinnedMeshComponent* MasterPoseComponentPtr = PreviewComponent->MasterPoseComponent.Get())
 			{
@@ -462,7 +373,7 @@ void GatherAndBakeAllAnimVertData(
 	}
 
 	// 2º Make Sure it in ref pose
-	PreviewComponent->EnablePreview(true, NULL);
+	PreviewComponent->EnablePreview(true, nullptr);
 	PreviewComponent->RefreshBoneTransforms(nullptr);
 	PreviewComponent->ClearMotionVector();
 	FlushRenderingCommands();
@@ -485,21 +396,18 @@ void GatherAndBakeAllAnimVertData(
 
 	
 
-	TArray <FVector4> ZeroedPos;
+	TArray <FVector4f> ZeroedPos;
 	ZeroedPos.SetNumZeroed(PerFrameArrayNum_Vert);
-	TArray <FVector4> ZeroedNorm;
+	TArray <FVector4f> ZeroedNorm;
 	ZeroedNorm.SetNumZeroed(PerFrameArrayNum_Vert);
 
 	// YOW, need different sizes for vert and bone textures.
-	TArray <FVector4> ZeroedBonePos;
+	TArray <FVector4f> ZeroedBonePos;
 	ZeroedBonePos.SetNumZeroed(PerFrameArrayNum_Bone);
-	TArray <FVector4> ZeroedBoneRot;
+	TArray <FVector4f> ZeroedBoneRot;
 	ZeroedBoneRot.SetNumZeroed(PerFrameArrayNum_Bone);
 
-	FSkeletalMeshRenderData& SkeletalMeshRenderData = PreviewComponent->MeshObject->GetSkeletalMeshRenderData();
-	FSkeletalMeshLODRenderData& LODData = SkeletalMeshRenderData.LODRenderData[0];
-	const auto& ActiveBoneIndices = LODData.ActiveBoneIndices;
-	TArray <FMatrix> RefToLocal;
+	TArray <FMatrix44f> RefToLocal;
 
 	// 3º Store Values
 	// Vert Anim
@@ -539,11 +447,11 @@ void GatherAndBakeAllAnimVertData(
 					{
 						const int32 IndexInZeroed = k;
 						const int32 VertID = UniqueSourceIDs[k];
-						const FVector Delta = FinalVerts[VertID].Position - RefPoseFinalVerts[VertID].Position;
+						const FVector3f Delta = FinalVerts[VertID].Position - RefPoseFinalVerts[VertID].Position;
 						MaxValueOffset = FMath::Max(Delta.GetAbsMax(), MaxValueOffset);
 						ZeroedPos[IndexInZeroed] = Delta;
 
-						const FVector DeltaNormal = FinalVerts[VertID].TangentZ.ToFVector() - RefPoseFinalVerts[VertID].TangentZ.ToFVector();
+						const FVector3f DeltaNormal = FinalVerts[VertID].TangentZ.ToFVector3f() - RefPoseFinalVerts[VertID].TangentZ.ToFVector3f();
 						ZeroedNorm[IndexInZeroed] = DeltaNormal;
 					}
 
@@ -558,11 +466,11 @@ void GatherAndBakeAllAnimVertData(
 	// Bone Anim
 	if (Profile->Anims_Bone.Num())
 	{
-		const auto& RefSkeleton = PreviewComponent->SkeletalMesh->RefSkeleton;
-		const auto& GlobalRefSkeleton = PreviewComponent->SkeletalMesh->Skeleton->GetReferenceSkeleton();
+		const auto& RefSkeleton = PreviewComponent->SkeletalMesh->GetRefSkeleton();
+		const auto& GlobalRefSkeleton = PreviewComponent->SkeletalMesh->GetSkeleton()->GetReferenceSkeleton();
 		// Ref Pose in Row 0
 		{
-			PreviewComponent->EnablePreview(true, NULL);
+			PreviewComponent->EnablePreview(true, nullptr);
 			PreviewComponent->RefreshBoneTransforms(nullptr);
 			PreviewComponent->ClearMotionVector();
 			FlushRenderingCommands();
@@ -574,9 +482,8 @@ void GatherAndBakeAllAnimVertData(
 				FQuat RefQuat = RefTM.GetRotation();
 				QuatSave(RefQuat);
 				const int32 GlobalID = GlobalRefSkeleton.FindBoneIndex(RefSkeleton.GetBoneName(B));
-				ZeroedBonePos[GlobalID] = RefTM.GetLocation();
-				ZeroedBoneRot[GlobalID] = FVector4(RefQuat.X, RefQuat.Y, RefQuat.Z, RefQuat.W);
-				//UE_LOG(LogUnrealMath, Warning, TEXT("%s"), *ZeroedBonePos[B].ToString());
+				ZeroedBonePos[GlobalID] = static_cast<FVector3f>(RefTM.GetLocation());
+				ZeroedBoneRot[GlobalID] = FVector4f(RefQuat.X, RefQuat.Y, RefQuat.Z, RefQuat.W);
 			}
 			GridBonePos.Append(ZeroedBonePos);
 			GridBoneRot.Append(ZeroedBoneRot);
@@ -610,14 +517,14 @@ void GatherAndBakeAllAnimVertData(
 					{
 						const int32 GlobalID = GlobalRefSkeleton.FindBoneIndex(RefSkeleton.GetBoneName(k));
 
-						FVector Pos = RefToLocal[k].GetOrigin();
+						FVector3f Pos = RefToLocal[k].GetOrigin();
 						ZeroedBonePos[GlobalID] = Pos;
 
 						MaxValuePosBone = FMath::Max(MaxValuePosBone, Pos.GetAbsMax());
 
-						FQuat Q = RefToLocal[k].ToQuat();
+						FQuat Q = static_cast<FQuat>(RefToLocal[k].ToQuat());
 						QuatSave(Q);
-						ZeroedBoneRot[GlobalID] = FVector4(Q.X, Q.Y, Q.Z, Q.W);
+						ZeroedBoneRot[GlobalID] = FVector4f(Q.X, Q.Y, Q.Z, Q.W);
 					}
 				}
 
@@ -629,7 +536,7 @@ void GatherAndBakeAllAnimVertData(
 
 	// 4º Put Mesh back into ref pose
 	{
-		PreviewComponent->EnablePreview(true, NULL);
+		PreviewComponent->EnablePreview(true, nullptr);
 		PreviewComponent->RefreshBoneTransforms(nullptr);
 
 		PreviewComponent->ClearMotionVector();
@@ -647,7 +554,10 @@ void GatherAndBakeAllAnimVertData(
 	Profile->MaxValueOffset_Vert = MaxValueOffset;
 	Profile->MaxValuePosition_Bone = MaxValuePosBone;
 
-	Profile->MarkPackageDirty();
+	if (!Profile->MarkPackageDirty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Could not save profile"));
+	}
 
 	OutGridVertPos = GridVertPos;
 	OutGridVertNormal = GridVertNormal;
@@ -703,29 +613,31 @@ static void EncodeData_Quat(const bool HD, const TArray <FVector4>& VectorData, 
 		if (FMath::Abs(VectorValue[0]) > Max)
 		{
 			BigComp = 0;
-			Bit0 = 0, Bit1 = 0;
+			Bit0 = Bit1 = false;
 			Max = FMath::Abs(VectorValue[0]);
 			WinnerValue = FVector(VectorValue[1], VectorValue[2], VectorValue[3]);
 		}
 		if (FMath::Abs(VectorValue[1]) > Max)
 		{
 			BigComp = 1;
-			Bit0 = 0, Bit1 = 1;
+			Bit0 = false;
+			Bit1 = true;
 			Max = FMath::Abs(VectorValue[1]);
 			WinnerValue = FVector(VectorValue[0], VectorValue[2], VectorValue[3]);
 		}
 		if (FMath::Abs(VectorValue[2]) > Max)
 		{
 			BigComp = 2;
-			Bit0 = 1, Bit1 = 0;
+			Bit0 = true;
+			Bit1 = false;
 			Max = FMath::Abs(VectorValue[2]);
 			WinnerValue = FVector(VectorValue[0], VectorValue[1], VectorValue[3]);
 		}
 		if (FMath::Abs(VectorValue[3]) > Max)
 		{
 			BigComp = 3;
-			Bit0 = 1, Bit1 = 1;
-			Max = FMath::Abs(VectorValue[3]);
+			Bit0 = Bit1 = true;
+
 			WinnerValue = FVector(VectorValue[0], VectorValue[1], VectorValue[2]);
 		}
 
@@ -736,53 +648,26 @@ static void EncodeData_Quat(const bool HD, const TArray <FVector4>& VectorData, 
 
 		const float MaxDim = WinnerValue.GetAbsMax();
 		// for now no bit based encoding, just have quats be always HDR (double precission).
-		if (false)
+		if (MaxDim > 0.f) 
 		{
-			/*
-			if (MaxDim > 0.f)
-			{
-				FVector4 Encoded = FVertexAnimUtils::BitEncodeVecId_HD(WinnerValue, 1.0, BigComp);
-				if(HD)
-					Data[i] = FLinearColor(Encoded);
-				else 
-					Data[i] = FLinearColor(FVertexAnimUtils::BitEncodeVecId(WinnerValue, 1.0, BigComp));
+			const float R = FMath::Max(0.001f, FVertexAnimUtils::EncodeFloat(WinnerValue.X, MaxDim)) * (Bit0 ? 1.0 : -1.0);
+			const float G = FMath::Max(0.001f, FVertexAnimUtils::EncodeFloat(WinnerValue.Y, MaxDim)) * (Bit1 ? 1.0 : -1.0);
+			const float B = WinnerValue.Z / MaxDim;
+			const float A = -1.0 + ((MaxDim / 1.0) * 2.0);// 
 
-				UE_LOG(LogUnrealMath, Warning, TEXT("Vec Value %s || Id %i || Result Encode %s"), 
-					*WinnerValue.ToString(), BigComp, *Encoded.ToString());
-			}
-			else
-			{
-				Data[i] = FLinearColor(0, 0, 0, 1);
-			}*/
+			Data[i] = FLinearColor(R, G, B, A);
 		}
 		else
 		{
-			if (MaxDim > 0.f) 
-			{
-			
-				float R = FMath::Max(0.001f, FVertexAnimUtils::EncodeFloat(WinnerValue.X, MaxDim)) * (Bit0 ? 1.0 : -1.0);
-				//R = FVertexAnimUtils::EncodeFloat(R * (Bit0 ? 1.0 : -1.0), 1.0);
-
-				float G = FMath::Max(0.001f, FVertexAnimUtils::EncodeFloat(WinnerValue.Y, MaxDim)) * (Bit1 ? 1.0 : -1.0);
-				//G = FVertexAnimUtils::EncodeFloat(G * (Bit1 ? 1.0 : -1.0), 1.0);
-
-				float B = WinnerValue.Z / MaxDim;// FVertexAnimUtils::EncodeFloat(WinnerValue.Z, MaxDim);
-
-				float A = -1.0 + ((MaxDim / 1.0) * 2.0);// 
-
-				Data[i] = FLinearColor(R, G, B, A);
-			}
-			else
-			{
-				Data[i] = FLinearColor(0, 0, 0, 1);
-			}
+			Data[i] = FLinearColor(0, 0, 0, 1);
 		}
+		
 	}
 }
 
 static UTexture2D* SetTexture2(
-	UWorld* World, const FString PackagePath, const FString Name, 
-	UTexture2D* Texture, 
+	UWorld* World, const FString PackagePath, const FString Name,
+	const UTexture2D* Texture, 
 	const int32 InSizeX, const int32 InSizeY,
 	const TArray <FFloat16Color>& Data, //const TArray <FVector>& VectorData,
 	EObjectFlags InObjectFlags)
@@ -790,15 +675,14 @@ static UTexture2D* SetTexture2(
 	UTexture2D* NewTexture;
 
 	{
-		
-		if (Texture != NULL)
+		if (Texture != nullptr)
 		{
 			NewTexture = NewObject<UTexture2D>(Texture->GetOuter(), FName(*Texture->GetName()), InObjectFlags);
 			
 		}
 		else
 		{
-			UPackage* Package = CreatePackage(NULL, *(PackagePath + Name));
+			UPackage* Package = CreatePackage(*(PackagePath + Name));
 			check(Package);
 			Package->FullyLoad();
 
@@ -810,7 +694,7 @@ static UTexture2D* SetTexture2(
 		checkf(NewTexture, TEXT("%s"), *Name);
 
 		NewTexture->Source.Init(InSizeX, InSizeY, /*NumSlices=*/ 1, /*NumMips=*/ 1, TSF_RGBA16F);
-		uint32* TextureData = (uint32*)NewTexture->Source.LockMip(0);
+		uint32* TextureData = reinterpret_cast<uint32*>(NewTexture->Source.LockMip(0));
 		const int32 TextureDataSize = NewTexture->Source.CalcMipSize(0);
 		
 		FMemory::Memcpy(TextureData, Data.GetData(), TextureDataSize); // this did not blow up 
@@ -819,7 +703,10 @@ static UTexture2D* SetTexture2(
 
 		NewTexture->PostEditChange();
 
-		NewTexture->MarkPackageDirty();
+		if (!NewTexture->MarkPackageDirty())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Could not save the new texture"));
+		}
 	}
 
 	return NewTexture;
@@ -827,46 +714,35 @@ static UTexture2D* SetTexture2(
 
 float FVATEditorUtils::PackBits(const uint32& bit)
 {
-	/*
-	int32 f16 = bit;
+	uint32 f16 = bit;
 	f16 += 1024;
-	int32 sign = (f16 & (0x8000)) << 16;
-	int32 expVar = ((((f16 >> 10) & 0x1f) - 15 + 127) << 23);
-	int32 mant = (f16 & 0x3ff) << 13;
-	f16 = (sign | expVar) | mant;
-	return f16;
-	*/
-
-	uint32 f16 = static_cast<uint32>(bit);
-	f16 += 1024;
-	uint32 sign = (f16 & (0x8000)) << 16;
-	uint32 expVar = //(f16 & 0x7fff) == 0 ? 0 : 
+	const uint32 sign = (f16 & (0x8000)) << 16;
+	const uint32 expVar = //(f16 & 0x7fff) == 0 ? 0 : 
 		(/*shift*/((/*bit. and*/ (/*bit.shift*/ f16 >> 10) & 0x1f) - 15 + 127) << 23);
 
-	uint32 mant = (f16 & 0x3ff) << 13;
+	const uint32 mant = (f16 & 0x3ff) << 13;
 	f16 = /*bit. or*/ (/*bit. or*/ sign | expVar) | mant;
-	//return f16;
-	//UE_LOG(LogUnrealMath, Warning, TEXT("HH %i || %i"), bit, f16); // printing 0
-	//return f16;// asfloat_O(f16);
+
 	return static_cast<float>(f16);
 }
 
 int FVATEditorUtils::UnPackBits(const float N)
 {
-	uint32 uRes32 = static_cast<uint32>(N);// asuint(N);
+	const uint32 uRes32 = static_cast<uint32>(N);// asuint(N);
 	const uint32 sign2 = ((uRes32 >> 16) & 0x8000);
-	const uint32 exp2 = ((((const int)((uRes32 >> 23) & 0xff)) - 127 + 15) << 10);
+	const uint32 exp2 = ((static_cast<const int>((uRes32 >> 23) & 0xff) - 127 + 15) << 10);
 	const uint32 mant2 = ((uRes32 >> 13) & 0x3ff);
 	const uint32 bits = (sign2 | exp2 | mant2);
 	const uint32 result = bits - 1024;
-	return float(result);
+
+	return static_cast<float>(result);
 }
 
 void FVATEditorUtils::DoBakeProcess(UDebugSkelMeshComponent* PreviewComponent)
 {
 	PreviewComponent->GlobalAnimRateScale = 0.f;
 	
-	UVertexAnimProfile* Profile = NULL;
+	UVertexAnimProfile* Profile = nullptr;
 
 	FString MeshName;
 	FString PackageName;
@@ -905,8 +781,8 @@ void FVATEditorUtils::DoBakeProcess(UDebugSkelMeshComponent* PreviewComponent)
 	}
 
 
-	bool DoAnimBake = (Profile != NULL) && !bOnlyCreateStaticMesh;
-	bool DoStaticMesh = (Profile != NULL);
+	bool DoAnimBake = (Profile != nullptr) && !bOnlyCreateStaticMesh;
+	bool DoStaticMesh = (Profile != nullptr);
 
 	if ((!DoAnimBake) && (!DoStaticMesh)) return;
 
@@ -973,7 +849,10 @@ void FVATEditorUtils::DoBakeProcess(UDebugSkelMeshComponent* PreviewComponent)
 		}
 
 		Profile->StaticMesh = StaticMesh;
-		Profile->MarkPackageDirty();
+		if (!Profile->MarkPackageDirty())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Could not save Profile"));
+		}
 	}
 
 	
@@ -1014,9 +893,11 @@ void FVATEditorUtils::DoBakeProcess(UDebugSkelMeshComponent* PreviewComponent)
 				Profile->NormalsTexture->CompressionSettings = TextureCompressionSettings::TC_VectorDisplacementmap;
 				Profile->NormalsTexture->SRGB = false;
 				Profile->NormalsTexture->Modify();
-				Profile->NormalsTexture->MarkPackageDirty();
-				Profile->NormalsTexture->PostEditChange();
-				Profile->NormalsTexture->UpdateResource();
+				if (Profile->NormalsTexture->MarkPackageDirty())
+				{
+					Profile->NormalsTexture->PostEditChange();
+					Profile->NormalsTexture->UpdateResource();
+				}
 			}
 
 
@@ -1034,9 +915,11 @@ void FVATEditorUtils::DoBakeProcess(UDebugSkelMeshComponent* PreviewComponent)
 				Profile->OffsetsTexture->CompressionSettings = TextureCompressionSettings::TC_HDR;
 				Profile->OffsetsTexture->SRGB = false;
 				Profile->OffsetsTexture->Modify();
-				Profile->OffsetsTexture->MarkPackageDirty();
-				Profile->OffsetsTexture->PostEditChange();
-				Profile->OffsetsTexture->UpdateResource();
+				if (Profile->OffsetsTexture->MarkPackageDirty())
+				{
+					Profile->OffsetsTexture->PostEditChange();
+					Profile->OffsetsTexture->UpdateResource();
+				}
 			}
 		
 		}
@@ -1062,9 +945,11 @@ void FVATEditorUtils::DoBakeProcess(UDebugSkelMeshComponent* PreviewComponent)
 				Profile->BoneRotTexture->CompressionSettings = TextureCompressionSettings::TC_HDR;
 				Profile->BoneRotTexture->SRGB = false;
 				Profile->BoneRotTexture->Modify();
-				Profile->BoneRotTexture->MarkPackageDirty();
-				Profile->BoneRotTexture->PostEditChange();
-				Profile->BoneRotTexture->UpdateResource();
+				if (Profile->BoneRotTexture->MarkPackageDirty())
+				{
+					Profile->BoneRotTexture->PostEditChange();
+					Profile->BoneRotTexture->UpdateResource();
+				}
 			}
 
 			{
@@ -1082,9 +967,11 @@ void FVATEditorUtils::DoBakeProcess(UDebugSkelMeshComponent* PreviewComponent)
 				Profile->BonePosTexture->SRGB = false;
 
 				Profile->BonePosTexture->Modify();
-				Profile->BonePosTexture->MarkPackageDirty();
-				Profile->BonePosTexture->PostEditChange();
-				Profile->BonePosTexture->UpdateResource();
+				if (Profile->BonePosTexture->MarkPackageDirty())
+				{
+					Profile->BonePosTexture->PostEditChange();
+					Profile->BonePosTexture->UpdateResource();
+				}
 			}
 
 		}
@@ -1092,10 +979,10 @@ void FVATEditorUtils::DoBakeProcess(UDebugSkelMeshComponent* PreviewComponent)
 	}
 }
 
-void FVATEditorUtils::UVChannelsToSkeletalMesh(USkeletalMesh* Skel, const int32 LODIndex, const int32 UVChannelStart, TArray<TArray<FVector2D>>& UVChannels)
+void FVATEditorUtils::UVChannelsToSkeletalMesh(const USkeletalMesh* Skel, const int32 LODIndex, const int32 UVChannelStart, TArray<TArray<FVector2D>>& UVChannels)
 {
 	check((UVChannelStart + UVChannels.Num()) <= MAX_TEXCOORDS);
-	check(UVChannelStart < (int32)Skel->GetImportedModel()->LODModels[LODIndex].NumTexCoords);
+	check(UVChannelStart < static_cast<int32>(Skel->GetImportedModel()->LODModels[LODIndex].NumTexCoords));
 
 	Skel->GetImportedModel()->LODModels[LODIndex].NumTexCoords = UVChannelStart + UVChannels.Num();
 
@@ -1109,7 +996,7 @@ void FVATEditorUtils::UVChannelsToSkeletalMesh(USkeletalMesh* Skel, const int32 
 			int32 SoftIndex = 0;
 			Skel->GetImportedModel()->LODModels[LODIndex].GetSectionFromVertexIndex(i, SectionIndex, SoftIndex);
 
-			Skel->GetImportedModel()->LODModels[LODIndex].Sections[SectionIndex].SoftVertices[SoftIndex].UVs[UVChannelStart+j] = UVChannels[j][i];
+			Skel->GetImportedModel()->LODModels[LODIndex].Sections[SectionIndex].SoftVertices[SoftIndex].UVs[UVChannelStart+j] = static_cast<FVector2f>(UVChannels[j][i]);
 		}
 	}
 }
@@ -1168,9 +1055,8 @@ void FVATEditorUtils::IntoIslands(const TArray<int32>& IndexBuffer, const TArray
 	
 	TArray<int32> PerTriIsland;
 	PerTriIsland.Init(INDEX_NONE, NewIndexBuffer.Num() / 3);
-	
-	int32 NumTris = NewIndexBuffer.Num() / 3;
 
+	const int32 NumTris = NewIndexBuffer.Num() / 3;
 	int32 NumIslands = 0;
 
 	while (true)
@@ -1191,7 +1077,7 @@ void FVATEditorUtils::IntoIslands(const TArray<int32>& IndexBuffer, const TArray
 		PerTriIsland[Winner] = NumIslands;
 		NumIslands++;
 
-		TArray <int32> CurrNeigs = { Winner };
+		TArray<int32> CurrNeigs = { Winner };
 
 		while (true)
 		{
@@ -1236,13 +1122,13 @@ void FVATEditorUtils::ClosestUVPivotAssign(
 
 	for (int32 i = 0; i < IndexBuffer.Num(); i+=3)
 	{
-		FVector2D A = UVs[IndexBuffer[i]];
-		FVector2D B = UVs[IndexBuffer[i+1]];
-		FVector2D C = UVs[IndexBuffer[i+2]];
+		const FVector2D A = UVs[IndexBuffer[i]];
+		const FVector2D B = UVs[IndexBuffer[i+1]];
+		const FVector2D C = UVs[IndexBuffer[i+2]];
 
-		FVector VA = FVector(A.X, A.Y, 0.0);
-		FVector VB = FVector(B.X, B.Y, 0.0);
-		FVector VC = FVector(C.X, C.Y, 0.0);
+		const FVector VA = FVector(A.X, A.Y, 0.0);
+		const FVector VB = FVector(B.X, B.Y, 0.0);
+		const FVector VC = FVector(C.X, C.Y, 0.0);
 
 		for (int32 j = 0; j < PivotUVPos.Num(); j++)
 		{
@@ -1258,7 +1144,7 @@ void FVATEditorUtils::ClosestUVPivotAssign(
 
 	for (int32 i = 0; i < IndexBuffer.Num(); i += 3)
 	{
-		int32 IslandID = IslandIDs[i / 3];
+		const int32 IslandID = IslandIDs[i / 3];
 		FVector2D A = UVs[IndexBuffer[i]];
 		FVector2D B = UVs[IndexBuffer[i + 1]];
 		FVector2D C = UVs[IndexBuffer[i + 2]];
@@ -1270,9 +1156,9 @@ void FVATEditorUtils::ClosestUVPivotAssign(
 		{
 			if (PerPivotIsland[j] == IslandID)
 			{
-				float DA = FVector2D::Distance(A, PivotUVPos[j]);
-				float DB = FVector2D::Distance(B, PivotUVPos[j]);
-				float DC = FVector2D::Distance(C, PivotUVPos[j]);
+				const float DA = FVector2D::Distance(A, PivotUVPos[j]);
+				const float DB = FVector2D::Distance(B, PivotUVPos[j]);
+				const float DC = FVector2D::Distance(C, PivotUVPos[j]);
 
 				if (DA < LA)
 				{
