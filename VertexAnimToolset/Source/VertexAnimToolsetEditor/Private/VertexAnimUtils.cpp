@@ -2,148 +2,48 @@
 
 #include "VertexAnimUtils.h"
 
-#include "IAnimationEditor.h"
-
-#include "VertexAnimProfile.h"
-
-#include "Misc/MessageDialog.h"
-#include "Modules/ModuleManager.h"
-#include "Misc/PackageName.h"
-#include "Widgets/Layout/SBorder.h"
-#include "Widgets/Text/STextBlock.h"
-#include "Widgets/Layout/SUniformGridPanel.h"
-#include "Widgets/Input/SEditableTextBox.h"
-#include "Widgets/Input/SButton.h"
-#include "Widgets/Input/SCheckBox.h"
-
-#include "EditorStyleSet.h"
-#include "Editor.h"
-#include "IContentBrowserSingleton.h"
+#include "AnimationRuntime.h"
+#include "AssetRegistryModule.h"
+#include "AssetViewerSettings.h"
 #include "ContentBrowserModule.h"
-
-#include "Engine/TextureRenderTarget2D.h"
-
-
-#include "Rendering/SkeletalMeshModel.h"
-#include "Rendering/SkeletalMeshRenderData.h"
-
-#include "Engine/SkeletalMesh.h"
-#include "SkeletalRenderPublic.h"
-#include "Runtime/Engine/Private/SkeletalRenderCPUSkin.h"
-
-#include "Animation/MorphTarget.h"
-#include "VertexAnimProfile.h"
-
-#include "MeshDescriptionOperations.h"
-#include "UVMapSettings.h"
+#include "Editor.h"
+#include "EditorStyleSet.h"
+#include "IAnimationEditor.h"
+#include "IContentBrowserSingleton.h"
+#include "IPersonaPreviewScene.h"
 #include "MeshAttributeArray.h"
 #include "MeshDescription.h"
-#include "MeshAttributes.h"
-
-
-#include "Animation/AnimSequence.h"
-
-#include "Misc/FeedbackContext.h"
-
-
-
-
-
-#include "IPersonaToolkit.h"
-#include "Rendering/SkeletalMeshModel.h"
-#include "Rendering/SkeletalMeshRenderData.h"
-
-#include "Animation/DebugSkelMeshComponent.h"
-
-
-#include "Textures/SlateIcon.h"
-#include "Styling/SlateTypes.h"
-#include "Framework/Commands/UIAction.h"
-#include "Framework/Commands/UICommandList.h"
-#include "Framework/MultiBox/MultiBoxExtender.h"
-#include "Framework/MultiBox/MultiBoxBuilder.h"
-
-#include "Engine/StaticMesh.h"
-#include "Materials/Material.h"
-#include "Materials/MaterialInstanceDynamic.h"
-
 #include "RawMesh.h"
-#include "StaticMeshResources.h"
-#include "MeshBuild.h"
-
-#include "Rendering/SkeletalMeshModel.h"
-#include "Rendering/SkeletalMeshRenderData.h"
-
-#include "Engine/SkeletalMesh.h"
 #include "SkeletalRenderPublic.h"
-#include "Runtime/Engine/Private/SkeletalRenderCPUSkin.h"
-
-#include "Animation/MorphTarget.h"
-
-#include "Developer/AssetTools/Public/IAssetTools.h"
-#include "Developer/AssetTools/Public/AssetToolsModule.h"
-
-#include "Toolkits/AssetEditorManager.h"
-#include "Dialogs/DlgPickAssetPath.h"
-#include "AssetRegistryModule.h"
-
+#include "StaticMeshResources.h"
 #include "VertexAnimProfile.h"
-
-
+#include "Animation/DebugSkelMeshComponent.h"
+#include "Developer/AssetTools/Public/AssetToolsModule.h"
+#include "Developer/AssetTools/Public/IAssetTools.h"
+#include "Dialogs/DlgPickAssetPath.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
 #include "Framework/Notifications/NotificationManager.h"
-#include "Widgets/Notifications/SNotificationList.h"
-
-#include "Engine.h"
-
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Misc/FeedbackContext.h"
 #include "Misc/MessageDialog.h"
-
-#include "IPersonaPreviewScene.h"
-#include "AssetViewerSettings.h"
-#include "RenderingThread.h"
-
-#include "Components/PoseableMeshComponent.h"
-
-#include "AnimationRuntime.h"
+#include "Misc/PackageName.h"
+#include "Modules/ModuleManager.h"
+#include "Rendering/SkeletalMeshModel.h"
+#include "Rendering/SkeletalMeshRenderData.h"
+#include "Runtime/Engine/Private/SkeletalRenderCPUSkin.h"
+#include "Styling/SlateTypes.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SCheckBox.h"
+#include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SUniformGridPanel.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Widgets/Text/STextBlock.h"
 
 //--------------------------------------
-#include "Interfaces/IPluginManager.h"
-#include "Misc/Paths.h"
-#include "ShaderCore.h"
-
-#include "VertexAnimUtils.h"
-
-#include "Animation/AnimSequence.h"
-
-#include "Kismet/KismetRenderingLibrary.h"
-
-#include "PackageTools.h"
-
-#include "Animation/AnimSequence.h"
-
-#include "Rendering/SkinWeightVertexBuffer.h"
-
-
-#include "Misc/App.h"
-#include "RenderingThread.h"
-#include "GameFramework/PlayerController.h"
-#include "ContentStreaming.h"
-#include "DrawDebugHelpers.h"
-#include "UnrealEngine.h"
-#include "SkeletalRenderPublic.h"
-
-#include "Animation/AnimStats.h"
-#include "Engine/SkeletalMeshSocket.h"
-#include "PhysicsEngine/PhysicsAsset.h"
-#include "EngineGlobals.h"
-#include "PrimitiveSceneProxy.h"
-#include "Engine/CollisionProfile.h"
-#include "Rendering/SkinWeightVertexBuffer.h"
-#include "SkeletalMeshTypes.h"
-#include "Animation/MorphTarget.h"
-#include "AnimationRuntime.h"
 
 #include "Animation/AnimSingleNodeInstance.h"
+#include "GameFramework/PlayerController.h"
 
 
 #define LOCTEXT_NAMESPACE "PickAssetDialog"
@@ -168,21 +68,21 @@ FVector4 FVertexAnimUtils::BitEncodeVecId(const FVector T, const float Bound, co
 {
 	const FVector N = ((T / Bound) +1.0) * 0.5;
 
-	uint32 RI = N.X * 1023;
-	uint32 GI = N.Y * 1023;
-	uint32 BI = N.Z * 1023;
+	const uint32 RI = N.X * 1023;
+	const uint32 GI = N.Y * 1023;
+	const uint32 BI = N.Z * 1023;
 
-	uint8 R8 = (uint8)(RI);
-	uint8 G8 = (uint8)(GI);
-	uint8 B8 = (uint8)(BI);
+	const uint8 R8 = static_cast<uint8>(RI);
+	const uint8 G8 = static_cast<uint8>(GI);
+	const uint8 B8 = static_cast<uint8>(BI);
 
 	// Should I be doing and & on these??
-	uint8 RA = (uint8)((RI >> 8) & 0x3);
-	uint8 GA = (uint8)((GI >> 6) & 0xc);
-	uint8 BA = (uint8)((BI >> 4) & 0x30);
-	uint8 IA = (uint8)(Id) << 6;
+	const uint8 RA = static_cast<uint8>((RI >> 8) & 0x3);
+	const uint8 GA = static_cast<uint8>((GI >> 6) & 0xc);
+	const uint8 BA = static_cast<uint8>((BI >> 4) & 0x30);
+	const uint8 IA = static_cast<uint8>(Id) << 6;
 
-	uint8 A8 = ((RA | GA) | BA) | IA;
+	const uint8 A8 = ((RA | GA) | BA) | IA;
 
 	return FVector4(R8 / 255.0, G8 / 255.0, B8 / 255.0, A8 / 255.0);
 }
@@ -191,44 +91,39 @@ FVector4 FVertexAnimUtils::BitEncodeVecId_HD(const FVector T, const float Bound,
 {
 	const FVector N = ((T / Bound) + 1.0) * 0.5;
 
-	uint32 RI = N.X * 0xFFFFF; 
-	uint32 GI = N.Y * 0xFFFFF;
-	uint32 BI = N.Z * 0xFFFFF;
+	const uint32 RI = N.X * 0xFFFFF; 
+	const uint32 GI = N.Y * 0xFFFFF;
+	const uint32 BI = N.Z * 0xFFFFF;
 
-	uint16 R8 = (uint16)(RI);
-	uint16 G8 = (uint16)(GI);
-	uint16 B8 = (uint16)(BI);
+	const uint16 R8 = static_cast<uint16>(RI);
+	const uint16 G8 = static_cast<uint16>(GI);
+	const uint16 B8 = static_cast<uint16>(BI);
 
 	// Should I be doing and & on these??
-	uint16 RA = (uint16)((RI >> 16) & 0xF);
-	uint16 GA = (uint16)((GI >> 12) & 0xF0);
-	uint16 BA = (uint16)((BI >> 8) & 0xF00);
-	uint16 IA = (uint16)(Id) << 12;
-
-	//UE_LOG(LogUnrealMath, Warning, TEXT("RI %i, R8 %i || RA %i || IA %i"), RI, R8, RA, IA);
-
-	uint16 A8 = ((RA | GA) | BA) | IA;
+	const uint16 RA = static_cast<uint16>((RI >> 16) & 0xF);
+	const uint16 GA = static_cast<uint16>((GI >> 12) & 0xF0);
+	const uint16 BA = static_cast<uint16>((BI >> 8) & 0xF00);
+	const uint16 IA = static_cast<uint16>(Id) << 12;
+	
+	const uint16 A8 = ((RA | GA) | BA) | IA;
 
 	return FVector4(
 		-1.0 + ((R8 / 65535.0) * 2.0),
 		-1.0 + ((G8 / 65535.0) * 2.0),
 		-1.0 + ((B8 / 65535.0) * 2.0),
 		-1.0 + ((A8 / 65535.0) * 2.0));
-	
 }
 
 
 int32 FVertexAnimUtils::Grid2DIndex(const int32& X, const int32& Y, const int32& Width)
 {
 	//(LocationX * GridSize.Height) + LocationY // CellIndex
-	//return (X * Height) + Y;
 	return (Y * Width) + X;
 }
 // This should be Y with Width
 int32 FVertexAnimUtils::Grid2D_X(const int32 & Index, const int32 & Width)
 {
 	// Original // X  = CellIndex / GridSize.Height
-	//return Index % Height;
 	return Index % Width;
 }
 
@@ -236,11 +131,8 @@ int32 FVertexAnimUtils::Grid2D_X(const int32 & Index, const int32 & Width)
 int32 FVertexAnimUtils::Grid2D_Y(const int32 & Index, const int32 & Width)
 {
 	// For Y = CellIndex % GridSize.Height
-	//return  Index / Height;
 	return  Index / Width;
 }
-
-
 
 // Helper function for ConvertMeshesToStaticMesh
 static void AddOrDuplicateMaterial(UMaterialInterface* InMaterialInterface, const FString& InPackageName, TArray<UMaterialInterface*>& OutMaterials)
@@ -249,12 +141,12 @@ static void AddOrDuplicateMaterial(UMaterialInterface* InMaterialInterface, cons
 	{
 		// Convert runtime material instances to new concrete material instances
 		// Create new package
-		FString OriginalMaterialName = InMaterialInterface->GetName();
+		const FString OriginalMaterialName = InMaterialInterface->GetName();
 		FString MaterialPath = FPackageName::GetLongPackagePath(InPackageName) / OriginalMaterialName;
 		FString MaterialName;
-		FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+		const FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
 		AssetToolsModule.Get().CreateUniqueAssetName(MaterialPath, TEXT(""), MaterialPath, MaterialName);
-		UPackage* MaterialPackage = CreatePackage(NULL, *MaterialPath);
+		UPackage* MaterialPackage = CreatePackage(*MaterialPath);
 
 		// Duplicate the object into the new package
 		UMaterialInterface* NewMaterialInterface = DuplicateObject<UMaterialInterface>(InMaterialInterface, MaterialPackage, *MaterialName);
@@ -266,11 +158,11 @@ static void AddOrDuplicateMaterial(UMaterialInterface* InMaterialInterface, cons
 			MaterialInstanceDynamic->K2_CopyMaterialInstanceParameters(OldMaterialInstanceDynamic);
 		}
 
-		NewMaterialInterface->MarkPackageDirty();
-
-		FAssetRegistryModule::AssetCreated(NewMaterialInterface);
-
-		InMaterialInterface = NewMaterialInterface;
+		if (NewMaterialInterface->MarkPackageDirty())
+		{
+			FAssetRegistryModule::AssetCreated(NewMaterialInterface);
+			InMaterialInterface = NewMaterialInterface;
+		}
 	}
 
 	OutMaterials.Add(InMaterialInterface);
@@ -289,7 +181,7 @@ static void ProcessMaterials(ComponentType* InComponent, const FString& InPackag
 }
 
 // Helper function for ConvertMeshesToStaticMesh
-static bool IsValidSkinnedMeshComponent(USkinnedMeshComponent* InComponent)
+static bool IsValidSkinnedMeshComponent(const USkinnedMeshComponent* InComponent)
 {
 	return InComponent && InComponent->MeshObject && InComponent->IsVisible();
 }
@@ -318,7 +210,7 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 
 	for (int32 OverallLODIndex = 0; OverallLODIndex < InOverallMaxLODs; OverallLODIndex++)
 	{
-		int32 LODIndexRead = FMath::Min(OverallLODIndex, NumLODs - 1);
+		const int32 LODIndexRead = FMath::Min(OverallLODIndex, NumLODs - 1);
 
 		FRawMesh& RawMesh = OutRawMeshes[OverallLODIndex];
 		FRawMeshTracker& RawMeshTracker = OutRawMeshTrackers[OverallLODIndex];
@@ -336,10 +228,12 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 		// Copy skinned vertex positions
 		for (int32 VertIndex = 0; VertIndex < FinalVertices.Num(); ++VertIndex)
 		{
-			RawMesh.VertexPositions.Add(InComponentToWorld.TransformPosition(FinalVertices[VertIndex].Position));
+			RawMesh.VertexPositions.Add(static_cast<UE::Math::TVector4<float>>(
+					InComponentToWorld.TransformPosition(static_cast<FVector>(
+						FinalVertices[VertIndex].Position))));
 		}
 
-		const uint32 NumTexCoords = FMath::Min(LODData.StaticVertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords(), (uint32)MAX_MESH_TEXTURE_COORDS);
+		const uint32 NumTexCoords = FMath::Min(LODData.StaticVertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords(), static_cast<uint32>(MAX_MESH_TEXTURE_COORDS));
 		const int32 NumSections = LODData.RenderSections.Num();
 		FRawStaticIndexBuffer16or32Interface& IndexBuffer = *LODData.MultiSizeIndexContainer.GetIndexBuffer();
 
@@ -357,10 +251,10 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 					RawMesh.WedgeIndices.Add(BaseVertexIndex + VertexIndexForWedge);
 
 					const FFinalSkinVertex& SkinnedVertex = FinalVertices[VertexIndexForWedge];
-					const FVector TangentX = InComponentToWorld.TransformVector(SkinnedVertex.TangentX.ToFVector());
-					const FVector TangentZ = InComponentToWorld.TransformVector(SkinnedVertex.TangentZ.ToFVector());
-					const FVector4 UnpackedTangentZ = SkinnedVertex.TangentZ.ToFVector4();
-					const FVector TangentY = (TangentZ ^ TangentX).GetSafeNormal() * UnpackedTangentZ.W;
+					const FVector3f TangentX = static_cast<UE::Math::TVector4<float>>(InComponentToWorld.TransformVector(SkinnedVertex.TangentX.ToFVector()));
+					const FVector3f TangentZ = static_cast<UE::Math::TVector4<float>>(InComponentToWorld.TransformVector(SkinnedVertex.TangentZ.ToFVector()));
+					const FVector4f UnpackedTangentZ = SkinnedVertex.TangentZ.ToFVector4f();
+					const FVector3f TangentY = (TangentZ ^ TangentX).GetSafeNormal() * UnpackedTangentZ.W;
 
 					RawMesh.WedgeTangentX.Add(TangentX);
 					RawMesh.WedgeTangentY.Add(TangentY);
@@ -394,7 +288,7 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 				// use the remapping of material indices if there is a valid value
 				if (SrcLODInfo.LODMaterialMap.IsValidIndex(SectionIndex) && SrcLODInfo.LODMaterialMap[SectionIndex] != INDEX_NONE)
 				{
-					MaterialIndex = FMath::Clamp<int32>(SrcLODInfo.LODMaterialMap[SectionIndex], 0, InSkinnedMeshComponent->SkeletalMesh->Materials.Num());
+					MaterialIndex = FMath::Clamp<int32>(SrcLODInfo.LODMaterialMap[SectionIndex], 0, InSkinnedMeshComponent->SkeletalMesh->GetMaterials().Num());
 				}
 
 				// copy face info
@@ -466,15 +360,9 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 		for (UMeshComponent* MeshComponent : InMeshComponents)
 		{
 			USkinnedMeshComponent* SkinnedMeshComponent = Cast<USkinnedMeshComponent>(MeshComponent);
-			UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(MeshComponent);
-
 			if (IsValidSkinnedMeshComponent(SkinnedMeshComponent))
 			{
 				OverallMaxLODs = FMath::Max(SkinnedMeshComponent->MeshObject->GetSkeletalMeshRenderData().LODRenderData.Num(), OverallMaxLODs);
-			}
-			else if (false)//(IsValidStaticMeshComponent(StaticMeshComponent))
-			{
-				OverallMaxLODs = FMath::Max(StaticMeshComponent->GetStaticMesh()->RenderData->LODResources.Num(), OverallMaxLODs);
 			}
 		}
 
@@ -488,15 +376,9 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			FMatrix ComponentToWorld = MeshComponent->GetComponentTransform().ToMatrixWithScale() * WorldToRoot;
 
 			USkinnedMeshComponent* SkinnedMeshComponent = Cast<USkinnedMeshComponent>(MeshComponent);
-			UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(MeshComponent);
-
 			if (IsValidSkinnedMeshComponent(SkinnedMeshComponent))
 			{
 				SkinnedMeshToRawMeshes(SkinnedMeshComponent, OverallMaxLODs, ComponentToWorld, PackageName, RawMeshTrackers, RawMeshes, Materials);
-			}
-			else if (false)//(IsValidStaticMeshComponent(StaticMeshComponent))
-			{
-				//StaticMeshToRawMeshes(StaticMeshComponent, OverallMaxLODs, ComponentToWorld, PackageName, RawMeshTrackers, RawMeshes, Materials);
 			}
 		}
 
@@ -539,17 +421,17 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 		if (bValidData)
 		{
 			// Then find/create it.
-			UPackage* Package = CreatePackage(NULL, *PackageName);
+			UPackage* Package = CreatePackage(*PackageName);
 			check(Package);
 
 			// Create StaticMesh object
 			StaticMesh = NewObject<UStaticMesh>(Package, *MeshName, RF_Public | RF_Standalone);
 			StaticMesh->InitResources();
 
-			StaticMesh->LightingGuid = FGuid::NewGuid();
+			StaticMesh->SetLightingGuid(FGuid::NewGuid());
 
 			// Determine which texture coordinate map should be used for storing/generating the lightmap UVs
-			const uint32 LightMapIndex = FMath::Min(MaxInUseTextureCoordinate + 1, (uint32)MAX_MESH_TEXTURE_COORDS - 1);
+			const uint32 LightMapIndex = FMath::Min(MaxInUseTextureCoordinate + 1, static_cast<uint32>(MAX_MESH_TEXTURE_COORDS) - 1);
 
 			// Add source to new StaticMesh
 			for (FRawMesh& RawMesh : RawMeshes)
@@ -572,14 +454,14 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			// Copy materials to new mesh 
 			for (UMaterialInterface* Material : Materials)
 			{
-				StaticMesh->StaticMaterials.Add(FStaticMaterial(Material));
+				StaticMesh->GetStaticMaterials().Add(FStaticMaterial(Material));
 			}
 
 			//Set the Imported version before calling the build
 			StaticMesh->ImportVersion = EImportStaticMeshVersion::LastVersion;
 
 			// Set light map coordinate index to match DstLightmapIndex
-			StaticMesh->LightMapCoordinateIndex = LightMapIndex;
+			StaticMesh->SetLightMapCoordinateIndex(LightMapIndex);
 
 			// setup section info map
 			for (int32 RawMeshLODIndex = 0; RawMeshLODIndex < RawMeshes.Num(); RawMeshLODIndex++)
@@ -604,7 +486,10 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			StaticMesh->Build(false);
 			StaticMesh->PostEditChange();
 
-			StaticMesh->MarkPackageDirty();
+			if (!StaticMesh->MarkPackageDirty())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Could not set the SM as dirty"));
+			}
 
 			// Notify asset registry of new asset
 			FAssetRegistryModule::AssetCreated(StaticMesh);
@@ -649,20 +534,19 @@ void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int
 				// Build a mapping of vertex positions to vertex colors.
 				for (int32 WedgeIndex = 0; WedgeIndex < Mesh.WedgeIndices.Num(); ++WedgeIndex)
 				{
-					int32 VertID = Mesh.WedgeIndices[WedgeIndex];
-					FVector Position = Mesh.VertexPositions[VertID];
-
+					const int32 VertID = Mesh.WedgeIndices[WedgeIndex];
 					for (uint32 TexCoordIndex = 0; TexCoordIndex < MAX_MESH_TEXTURE_COORDS; TexCoordIndex++)
 					{
-						if (TexCoordIndex <= NumUVChannels)//(!RawMeshTrackers[RawMeshIndex].bValidTexCoords[TexCoordIndex])
+						if (TexCoordIndex <= NumUVChannels)
 						{
 							if ((TexCoordIndex == UVChannel))
 							{
-								// Mesh.WedgeTexCoords[TexCoordIndex].Empty();
 								if (Mesh.WedgeTexCoords[TexCoordIndex].Num() != Mesh.WedgeIndices.Num())
+								{
 									Mesh.WedgeTexCoords[TexCoordIndex].SetNum(Mesh.WedgeIndices.Num());
+								}
 
-								Mesh.WedgeTexCoords[TexCoordIndex][WedgeIndex] = UVs[PaintingMeshLODIndex][VertID];
+								Mesh.WedgeTexCoords[TexCoordIndex][WedgeIndex] = static_cast<FVector2f>(UVs[PaintingMeshLODIndex][VertID]);
 							}
 							else if(TexCoordIndex >= NumUVChannels)
 							{
@@ -677,7 +561,7 @@ void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int
 				}
 
 				// Determine which texture coordinate map should be used for storing/generating the lightmap UVs
-				const uint32 LightMapIndex = FMath::Min(UVChannel == NumUVChannels ? NumUVChannels + 1 : NumUVChannels, (uint32)MAX_MESH_TEXTURE_COORDS - 1);
+				const uint32 LightMapIndex = FMath::Min(UVChannel == NumUVChannels ? NumUVChannels + 1 : NumUVChannels, static_cast<uint32>(MAX_MESH_TEXTURE_COORDS) - 1);
 				StaticMesh->GetSourceModel(PaintingMeshLODIndex).BuildSettings.DstLightmapIndex = LightMapIndex;
 
 				// Save the new raw mesh.
@@ -686,9 +570,7 @@ void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int
 
 				StaticMesh->ImportVersion = EImportStaticMeshVersion::LastVersion;
 				// Set light map coordinate index to match DstLightmapIndex
-				StaticMesh->LightMapCoordinateIndex = LightMapIndex;
-			
-
+				StaticMesh->SetLightMapCoordinateIndex(LightMapIndex);
 			}
 		}
 	}
@@ -696,7 +578,10 @@ void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int
 	// Build mesh from source
 	StaticMesh->Build(false);
 	StaticMesh->PostEditChange();
-	StaticMesh->MarkPackageDirty();
+	if (!StaticMesh->MarkPackageDirty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Could not set the SM as dirty"));
+	}
 }
 
 void FVertexAnimUtils::VATColorsToStaticMeshLODs(UStaticMesh* StaticMesh, const TArray<TArray<FColor>>& Colors)
@@ -709,7 +594,6 @@ void FVertexAnimUtils::VATColorsToStaticMeshLODs(UStaticMesh* StaticMesh, const 
 		{
 			if (StaticMesh->GetSourceModel(PaintingMeshLODIndex).IsRawMeshEmpty() == false)
 			{
-				const uint32 NumUVChannels = StaticMesh->GetNumUVChannels(PaintingMeshLODIndex);
 				// Extract the raw mesh.
 				FRawMesh Mesh;
 				StaticMesh->GetSourceModel(PaintingMeshLODIndex).LoadRawMesh(Mesh);
@@ -724,8 +608,7 @@ void FVertexAnimUtils::VATColorsToStaticMeshLODs(UStaticMesh* StaticMesh, const 
 				// Build a mapping of vertex positions to vertex colors.
 				for (int32 WedgeIndex = 0; WedgeIndex < Mesh.WedgeIndices.Num(); ++WedgeIndex)
 				{
-					int32 VertID = Mesh.WedgeIndices[WedgeIndex];
-					FVector Position = Mesh.VertexPositions[VertID];
+					const int32 VertID = Mesh.WedgeIndices[WedgeIndex];
 					Mesh.WedgeColors[WedgeIndex] = Colors[PaintingMeshLODIndex][VertID];
 				}
 
@@ -739,19 +622,16 @@ void FVertexAnimUtils::VATColorsToStaticMeshLODs(UStaticMesh* StaticMesh, const 
 	// Build mesh from source
 	StaticMesh->Build(false);
 	StaticMesh->PostEditChange();
-	StaticMesh->MarkPackageDirty();
+	if (!StaticMesh->MarkPackageDirty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Could not mark SM as dirty"));
+	}
 }
-
-
-
-
 
 void SPickAssetDialog::Construct(const FArguments& InArgs)
 {
-
-	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
-
-	TSharedPtr <SVerticalBox> AssetPickerBox1 = SNew(SVerticalBox)
+	const FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+	const TSharedPtr <SVerticalBox> AssetPickerBox1 = SNew(SVerticalBox)
 		+ SVerticalBox::Slot()
 		.FillHeight(0.1)
 		.FillHeight(0.1)
@@ -759,36 +639,7 @@ void SPickAssetDialog::Construct(const FArguments& InArgs)
 			SNew(STextBlock)
 			.Text(LOCTEXT("Profile", "Profile"))
 		];
-
-	/*
-	TSharedPtr <SVerticalBox> AssetPickerBox2 = SNew(SVerticalBox)
-	+SVerticalBox::Slot()
-		.FillHeight(0.1)
-		.FillHeight(0.1)
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("Offsets", "Offsets Render Target"))
-		];
-
-	TSharedPtr <SVerticalBox> AssetPickerBox3 = SNew(SVerticalBox)
-		+ SVerticalBox::Slot()
-		.FillHeight(0.1)
-		.FillHeight(0.1)
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("Normals", "Normals Render Target"))
-		];
-
-	TSharedPtr <SVerticalBox> AssetPickerBox4 = SNew(SVerticalBox)
-		+ SVerticalBox::Slot()
-		.FillHeight(0.1)
-		.FillHeight(0.1)
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("StaticMesh", "Static Mesh"))
-		];
-	*/
-
+	
 	{
 		// Vertex Anim Profile
 		{
@@ -798,7 +649,7 @@ void SPickAssetDialog::Construct(const FArguments& InArgs)
 
 			AssetPickerConfig.GetCurrentSelectionDelegates.Add(&GetCurrentSelectionDelegate_Profile);
 
-			AssetPickerConfig.OnShouldFilterAsset = FOnShouldFilterAsset::CreateSP(this, &SPickAssetDialog::Filter);
+			AssetPickerConfig.OnShouldFilterAsset = FOnShouldFilterAsset::CreateStatic(&SPickAssetDialog::Filter);
 			AssetPickerConfig.bAllowNullSelection = true;
 			AssetPickerConfig.InitialAssetViewType = EAssetViewType::List;
 			AssetPickerConfig.ThumbnailScale = 1.f;
@@ -822,143 +673,7 @@ void SPickAssetDialog::Construct(const FArguments& InArgs)
 	PathPickerConfig.bAddDefaultPath = true;
 	//
 
-	/*
-	SWindow::Construct(SWindow::FArguments()
-		.Title(InArgs._Title)
-		.SupportsMinimize(false)
-		.SupportsMaximize(false)
-		.ClientSize(FVector2D(1080, 720))
-		[
-			SNew(SVerticalBox)
-
-			+ SVerticalBox::Slot() 
-		.Padding(2, 2, 2, 4)
-		.HAlign(HAlign_Fill)
-		[
-			SNew(SBorder)
-			.BorderImage(FEditorStyle::GetBrush("ToolPanel.GroupBorder"))
-		[
-			SNew(SVerticalBox)
-
-			+ SVerticalBox::Slot()
-		.FillHeight(1)
-		.Padding(3)
-		.HAlign(HAlign_Fill)
-		[
-			SNew(SVerticalBox)
-
-		+ SVerticalBox::Slot()
-		.FillHeight(2)
-		.Padding(3)
-		[
-			SNew(SHorizontalBox)
-
-		+ SHorizontalBox::Slot()
-		.FillWidth(1)
-		.HAlign(HAlign_Fill)
-		.VAlign(VAlign_Fill)
-		[
-			AssetPickerBox1.ToSharedRef()
-		]
-		]
 	
-	+ SVerticalBox::Slot()
-		.AutoHeight()
-		.Padding(3)
-		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.Padding(0, 0, 10, 0)
-		.VAlign(VAlign_Center)
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("CreateStaticMesh", "Create Static Mesh"))
-		]
-	
-	+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.Padding(0, 0, 10, 0)
-		.VAlign(VAlign_Center)
-		[
-			SNew(SCheckBox)
-			.ToolTipText(LOCTEXT("CreateStaticMesh_Tooltip", "Create Static Mesh with special UV channel for vertex animation"))
-		.IsChecked(ECheckBoxState::Checked)
-		.OnCheckStateChanged(this, &SPickAssetDialog::OnCheckedCreateStaticMesh)
-
-		]
-	
-		]
-		
-	    
-	    + SVerticalBox::Slot()
-		.FillHeight(1)
-		.Padding(3)
-		.HAlign(HAlign_Fill)
-		[
-			ContentBrowserModule.Get().CreatePathPicker(PathPickerConfig)
-		]
-		
-		]
-		
-	
-	+ SVerticalBox::Slot()
-		.AutoHeight()
-		.Padding(3)
-		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-		.AutoWidth()
-		.Padding(0, 0, 10, 0)
-		.VAlign(VAlign_Center)
-		[
-			SNew(STextBlock)
-			.Text(LOCTEXT("Name", "Name"))
-		]
-
-	+ SHorizontalBox::Slot()
-		[
-			SNew(SEditableTextBox)
-			.Text(AssetName)
-		.OnTextCommitted(this, &SPickAssetDialog::OnNameChange)
-		.MinDesiredWidth(250)
-		]
-		]
-		
-		]
-		]
-		
-	+ SVerticalBox::Slot()
-		.AutoHeight()
-		.HAlign(HAlign_Right)
-		.VAlign(VAlign_Bottom)
-		[
-			SNew(SUniformGridPanel)
-			.SlotPadding(FEditorStyle::GetMargin("StandardDialog.SlotPadding"))
-		.MinDesiredSlotWidth(FEditorStyle::GetFloat("StandardDialog.MinDesiredSlotWidth"))
-		.MinDesiredSlotHeight(FEditorStyle::GetFloat("StandardDialog.MinDesiredSlotHeight"))
-		+ SUniformGridPanel::Slot(0, 0)
-		[
-			SNew(SButton)
-			.Text(LOCTEXT("OK", "OK"))
-		.HAlign(HAlign_Center)
-		.ContentPadding(FEditorStyle::GetMargin("StandardDialog.ContentPadding"))
-		.OnClicked(this, &SPickAssetDialog::OnButtonClick, EAppReturnType::Ok)
-		]
-	+ SUniformGridPanel::Slot(1, 0)
-		[
-			SNew(SButton)
-			.Text(LOCTEXT("Cancel", "Cancel"))
-		.HAlign(HAlign_Center)
-		.ContentPadding(FEditorStyle::GetMargin("StandardDialog.ContentPadding"))
-		.OnClicked(this, &SPickAssetDialog::OnButtonClick, EAppReturnType::Cancel)
-		]
-		]
-		]
-		);
-		*/
-
-
     SWindow::Construct(SWindow::FArguments()
 	.Title(InArgs._Title)
 	.SupportsMinimize(false)
@@ -1075,51 +790,30 @@ FReply SPickAssetDialog::OnButtonClick(EAppReturnType::Type ButtonID)
 		case 1:	// NULL Profile
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("NULLProfile", "No Profile Selected"));
 			return FReply::Unhandled();
-			break;
 		case 2:	// Invalid Offsets or Normals Texture
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("NULLOffsetsNormalsTexture", "Selected Profile has invalid Offsets or Normals Texture"));
 			return FReply::Unhandled();
-			break;
 		case 3:	// No Width / Height correspondence between Profile and Offsets Texture
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("NoWidthHeightCorrespondenceOffsets", "Selected Profile has no Width / Height correspondence with Offsets texture"));
 			return FReply::Unhandled();
-			break;
 		case 4: // No Width / Height correspondence between Profile and Normals Texture
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("Invalid Override Width Height", "Deactivated Auto Size, but invalid Override Size"));
 			return FReply::Unhandled();
-			break;
 		case 5: // Profile has not Anims
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("SelectedProfileHasNoAnims", "Selected Profile has no Anims"));
 			return FReply::Unhandled();
-			break;
 		case 6: // Invalid Sequence Ref
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("InvalidSequenceRefInProfile", "Selected Profile has anim with invalid Sequence Ref"));
 			return FReply::Unhandled();
-			break;
 		case 7: // Anims have different Skeletons
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("DifferentSkeletonsInProfileAnims", "Selected Profile has anims with different skeletons"));
 			return FReply::Unhandled();
-			break;
 		case 8: // Anim has Num of Frames less than 1
 			FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("AnimsInProfileWith0NumFrames", "Selected Profile has anim with Num Frames less than 1"));
 			return FReply::Unhandled();
-			break;
 		default:
 			break;
 		};
-
-		// If no valid profile selected it doesnt get here
-
-		UVertexAnimProfile* SelectedProfile = GetSelectedProfile();
-
-		if (bOnlyCreateStaticMesh)
-		{
-			if (false)//(!ValidatePackage())
-			{
-				FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("InvalidPackage", "Invalid Package for static mesh"));
-				return FReply::Unhandled();
-			}
-		}
 	}
 
 	//-----------------------------------------------------------------------------------------------------
@@ -1132,7 +826,7 @@ FReply SPickAssetDialog::OnButtonClick(EAppReturnType::Type ButtonID)
 }
 
 /** Ensures supplied package name information is valid */
-bool SPickAssetDialog::ValidatePackage()
+bool SPickAssetDialog::ValidatePackage() const
 {
 	FText Reason;
 	if (!FPackageName::IsValidLongPackageName(GetFullAssetPath().ToString(), false, &Reason)
@@ -1143,11 +837,11 @@ bool SPickAssetDialog::ValidatePackage()
 	}
 
 	if (FPackageName::DoesPackageExist(GetFullAssetPath().ToString()) || 
-		FindObject<UObject>(NULL, *(AssetPath.ToString() + "/" + AssetName.ToString() + "." + AssetName.ToString())) != NULL)
+		FindObject<UObject>(nullptr, *(AssetPath.ToString() + "/" + AssetName.ToString() + "." + AssetName.ToString())) != nullptr)
 	{
-		if (GetSelectedProfile() != NULL)
+		if (GetSelectedProfile() != nullptr)
 		{
-			if (GetSelectedProfile()->StaticMesh == FindObject<UObject>(NULL, *(AssetPath.ToString() + "/" + AssetName.ToString() + "." + AssetName.ToString())))
+			if (GetSelectedProfile()->StaticMesh == FindObject<UObject>(nullptr, *(AssetPath.ToString() + "/" + AssetName.ToString() + "." + AssetName.ToString())))
 			{
 				return true;
 			}
@@ -1177,7 +871,7 @@ const FText& SPickAssetDialog::GetAssetName()
 	return AssetName;
 }
 
-FText SPickAssetDialog::GetFullAssetPath()
+FText SPickAssetDialog::GetFullAssetPath() const
 {
 	return FText::FromString(AssetPath.ToString() + "/" + AssetName.ToString());
 }
@@ -1188,7 +882,7 @@ void SPickAssetDialog::OnCheckedOnlyCreateStaticMesh(ECheckBoxState NewCheckedSt
 	{
 		bOnlyCreateStaticMesh = true;
 	}
-	else //if (NewCheckedState == ECheckBoxState::Unchecked)
+	else
 	{
 		bOnlyCreateStaticMesh = false;
 	}
@@ -1220,7 +914,7 @@ UVertexAnimProfile * SPickAssetDialog::GetSelectedProfile() const
 		return StoredProfiles[0];
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 
@@ -1238,58 +932,71 @@ bool SPickAssetDialog::Filter(const FAssetData & AssetData)
 int32 SPickAssetDialog::ValidateProfile() const
 {
 	UVertexAnimProfile* Profile = GetSelectedProfile();
-	if (Profile != NULL)
+	if (Profile != nullptr)
 	{
 		// Invalid Offsets or Normals Texture
-		if ((!Profile->AutoSize) && (Profile->OverrideSize_Vert.GetMax() < 8)) return 4;
+		if ((!Profile->AutoSize) && (Profile->OverrideSize_Vert.GetMax() < 8)) 
+		{
+			return 4;
+		}
+
 		// Profile has not Anims
-		if ((Profile->Anims_Vert.Num() == 0) && (Profile->Anims_Bone.Num() == 0)) return 5;
-		
-		
-		USkeleton* Skeleton = NULL;
-		if (Profile->Anims_Vert.Num())
-			if (Profile->Anims_Vert[0].SequenceRef != NULL) Skeleton = Profile->Anims_Vert[0].SequenceRef->GetSkeleton();
-		if (Profile->Anims_Bone.Num())
-			if (Profile->Anims_Bone[0].SequenceRef != NULL) Skeleton = Profile->Anims_Bone[0].SequenceRef->GetSkeleton();
-
+		if ((Profile->Anims_Vert.Num() == 0) && (Profile->Anims_Bone.Num() == 0)) 
 		{
-			for (int32 i = 0; i < Profile->Anims_Vert.Num(); i++)
-			{
-				// Invalid Sequence Ref
-				if (Profile->Anims_Vert[i].SequenceRef == NULL) return 6;
-				
-				if (Profile->Anims_Vert[i].SequenceRef->GetSkeleton() != Skeleton)
-				{
-					// Anims have different Skeletons
-					return 7;
-				}
-				if ((Profile->Anims_Vert[i].NumFrames < 1))
-				{
-					// Anim has Num Frames less than 1
-					return 8;
-				}
-			}
-		}
-		{
-			for (int32 i = 0; i < Profile->Anims_Bone.Num(); i++)
-			{
-				// Invalid Sequence Ref
-				if (Profile->Anims_Bone[i].SequenceRef == NULL) return 6;
-
-				if (Profile->Anims_Bone[i].SequenceRef->GetSkeleton() != Skeleton)
-				{
-					// Anims have different Skeletons
-					return 7;
-				}
-				if ((Profile->Anims_Bone[i].NumFrames < 1))
-				{
-					// Anim has Num Frames less than 1
-					return 8;
-				}
-			}
+			return 5;
 		}
 
-		//Profile->LODInSkeletalMesh;
+		const USkeleton* Skeleton = nullptr;
+		if (Profile->Anims_Vert.Num() && Profile->Anims_Vert[0].SequenceRef != nullptr) 
+		{
+			Skeleton = Profile->Anims_Vert[0].SequenceRef->GetSkeleton();
+		}
+
+		if (!Skeleton && Profile->Anims_Bone.Num() > 0 && Profile->Anims_Bone[0].SequenceRef != nullptr) 
+		{
+			Skeleton = Profile->Anims_Bone[0].SequenceRef->GetSkeleton();
+		}
+
+		
+		for (int32 i = 0; i < Profile->Anims_Vert.Num(); i++)
+		{
+			// Invalid Sequence Ref
+			if (Profile->Anims_Vert[i].SequenceRef == nullptr) return 6;
+			
+			if (Profile->Anims_Vert[i].SequenceRef->GetSkeleton() != Skeleton)
+			{
+				// Anims have different Skeletons
+				return 7;
+			}
+			if ((Profile->Anims_Vert[i].NumFrames < 1))
+			{
+				// Anim has Num Frames less than 1
+				return 8;
+			}
+		}
+		
+		
+		for (int32 i = 0; i < Profile->Anims_Bone.Num(); i++)
+		{
+			// Invalid Sequence Ref
+			if (Profile->Anims_Bone[i].SequenceRef == nullptr) 
+			{
+				return 6;
+			}
+
+			if (Profile->Anims_Bone[i].SequenceRef->GetSkeleton() != Skeleton)
+			{
+				// Anims have different Skeletons
+				return 7;
+			}
+
+			if ((Profile->Anims_Bone[i].NumFrames < 1))
+			{
+				// Anim has Num Frames less than 1
+				return 8;
+			}
+		}
+
 		return 0;
 	}
 
