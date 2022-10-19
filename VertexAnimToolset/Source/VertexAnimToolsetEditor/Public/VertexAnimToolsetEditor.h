@@ -30,12 +30,12 @@ protected:
 	//void AddAnimationEditorToolbarExtender();
 	//void RemoveAnimationEditorToolbarExtender();
 
-	void HandleAddSkeletalMeshActionExtenderToToolbar(FToolBarBuilder& ParentToolbarBuilder, UDebugSkelMeshComponent* InMeshComponent);
+	void HandleAddSkeletalMeshActionExtenderToToolbar(FToolBarBuilder& ParentToolbarBuilder, UDebugSkelMeshComponent* InMeshComponent) const;
 
 
 	void AddSkeletalMeshEditorToolbarExtender();
 
-	void RemoveSkeletalMeshEditorToolbarExtender();
+	void RemoveSkeletalMeshEditorToolbarExtender() const;
 
 	TSharedRef<FExtender> GetSkeletalMeshEditorToolbarExtender(const TSharedRef<FUICommandList> CommandList, TSharedRef<ISkeletalMeshEditor> InSkeletalMeshEditor);
 
