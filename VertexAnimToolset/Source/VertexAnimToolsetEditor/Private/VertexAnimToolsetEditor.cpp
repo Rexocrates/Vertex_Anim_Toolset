@@ -36,7 +36,7 @@
 #include "Developer/AssetTools/Public/IAssetTools.h"
 #include "Developer/AssetTools/Public/AssetToolsModule.h"
 
-#include "Toolkits/AssetEditorManager.h"
+#include "Toolkits/ToolkitManager.h"
 #include "Dialogs/DlgPickAssetPath.h"
 #include "AssetRegistryModule.h"
 

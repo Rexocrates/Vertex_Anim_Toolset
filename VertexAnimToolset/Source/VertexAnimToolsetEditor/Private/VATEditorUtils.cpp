@@ -37,7 +37,8 @@
 #include "Developer/AssetTools/Public/IAssetTools.h"
 #include "Developer/AssetTools/Public/AssetToolsModule.h"
 
-#include "Toolkits/AssetEditorManager.h"
+#include "Toolkits/ToolkitManager.h"
+
 #include "Dialogs/DlgPickAssetPath.h"
 #include "AssetRegistryModule.h"
 
@@ -110,7 +111,7 @@ static void MapSkinVerts(
 	UVertexAnimProfile* InProfile, const TArray <FFinalSkinVertex>& SkinVerts,
 	TArray <int32>& UniqueVertsSourceID, TArray <FVector2D>& OutUVSet_Vert)
 {
-	TArray <FVector> UniqueVerts;
+	TArray <FVector3f> UniqueVerts;
 	TArray <int32> UniqueID;
 	UniqueID.SetNumZeroed(SkinVerts.Num());
 
@@ -234,8 +235,8 @@ static void SkinnedMeshVATData(
 
 	const int32 NumLODs = InSkinnedMeshComponent->GetNumLODs();
 
-	const auto& RefSkeleton = InSkinnedMeshComponent->SkeletalMesh->RefSkeleton;
-	const auto& GlobalRefSkeleton = InSkinnedMeshComponent->SkeletalMesh->Skeleton->GetReferenceSkeleton();
+	const auto& RefSkeleton = InSkinnedMeshComponent->SkeletalMesh->GetRefSkeleton();
+	const auto& GlobalRefSkeleton = InSkinnedMeshComponent->SkeletalMesh->GetSkeleton()->GetReferenceSkeleton();
 
 	TArray <FVector2D> GridUVs_Vert;
 	TArray <FVector2D> GridUVs_Bone;
@@ -296,15 +297,15 @@ static void SkinnedMeshVATData(
 
 			for (int32 o = 0; o < FinalVertices.Num(); o++)
 			{
-				const FVector Pos = FinalVertices[o].Position;
+				const FVector3f Pos = FinalVertices[o].Position;
 				float Lowest = MAX_FLT;
 				int32 WinnerID = INDEX_NONE;
 
 				for (int32 u = 0; u < UniqueSourceID.Num(); u++)
 				{
-					const FVector TargetPos = AnimMeshFinalVertices[UniqueSourceID[u]].Position;
+					const FVector3f TargetPos = AnimMeshFinalVertices[UniqueSourceID[u]].Position;
 
-					const float Dist = FVector::Dist(Pos, TargetPos);
+					const float Dist = FVector3f::Dist(Pos, TargetPos);
 					if (Dist < Lowest)
 					{
 						Lowest = Dist;
@@ -499,7 +500,7 @@ void GatherAndBakeAllAnimVertData(
 	FSkeletalMeshRenderData& SkeletalMeshRenderData = PreviewComponent->MeshObject->GetSkeletalMeshRenderData();
 	FSkeletalMeshLODRenderData& LODData = SkeletalMeshRenderData.LODRenderData[0];
 	const auto& ActiveBoneIndices = LODData.ActiveBoneIndices;
-	TArray <FMatrix> RefToLocal;
+	TArray <FMatrix44f> RefToLocal;
 
 	// 3º Store Values
 	// Vert Anim
@@ -539,12 +540,13 @@ void GatherAndBakeAllAnimVertData(
 					{
 						const int32 IndexInZeroed = k;
 						const int32 VertID = UniqueSourceIDs[k];
-						const FVector Delta = FinalVerts[VertID].Position - RefPoseFinalVerts[VertID].Position;
+						const FVector3f Delta = FinalVerts[VertID].Position - RefPoseFinalVerts[VertID].Position;
 						MaxValueOffset = FMath::Max(Delta.GetAbsMax(), MaxValueOffset);
-						ZeroedPos[IndexInZeroed] = Delta;
+						ZeroedPos[IndexInZeroed] = FVector4(Delta);
 
-						const FVector DeltaNormal = FinalVerts[VertID].TangentZ.ToFVector() - RefPoseFinalVerts[VertID].TangentZ.ToFVector();
-						ZeroedNorm[IndexInZeroed] = DeltaNormal;
+						const FVector3f DeltaNormal = FinalVerts[VertID].TangentZ.ToFVector3f() - RefPoseFinalVerts[VertID].TangentZ.ToFVector3f();
+						ZeroedNorm[IndexInZeroed] = FVector4(DeltaNormal);
+						
 					}
 
 					GridVertPos.Append(ZeroedPos);
@@ -558,8 +560,8 @@ void GatherAndBakeAllAnimVertData(
 	// Bone Anim
 	if (Profile->Anims_Bone.Num())
 	{
-		const auto& RefSkeleton = PreviewComponent->SkeletalMesh->RefSkeleton;
-		const auto& GlobalRefSkeleton = PreviewComponent->SkeletalMesh->Skeleton->GetReferenceSkeleton();
+		const auto& RefSkeleton = PreviewComponent->SkeletalMesh->GetRefSkeleton();
+		const auto& GlobalRefSkeleton = PreviewComponent->SkeletalMesh->GetSkeleton()->GetReferenceSkeleton();
 		// Ref Pose in Row 0
 		{
 			PreviewComponent->EnablePreview(true, NULL);
@@ -610,12 +612,12 @@ void GatherAndBakeAllAnimVertData(
 					{
 						const int32 GlobalID = GlobalRefSkeleton.FindBoneIndex(RefSkeleton.GetBoneName(k));
 
-						FVector Pos = RefToLocal[k].GetOrigin();
-						ZeroedBonePos[GlobalID] = Pos;
+						FVector3f Pos = RefToLocal[k].GetOrigin();
+						ZeroedBonePos[GlobalID] = FVector4(Pos);
 
 						MaxValuePosBone = FMath::Max(MaxValuePosBone, Pos.GetAbsMax());
 
-						FQuat Q = RefToLocal[k].ToQuat();
+						FQuat Q = FQuat(RefToLocal[k].ToQuat());
 						QuatSave(Q);
 						ZeroedBoneRot[GlobalID] = FVector4(Q.X, Q.Y, Q.Z, Q.W);
 					}
@@ -1109,7 +1111,7 @@ void FVATEditorUtils::UVChannelsToSkeletalMesh(USkeletalMesh* Skel, const int32 
 			int32 SoftIndex = 0;
 			Skel->GetImportedModel()->LODModels[LODIndex].GetSectionFromVertexIndex(i, SectionIndex, SoftIndex);
 
-			Skel->GetImportedModel()->LODModels[LODIndex].Sections[SectionIndex].SoftVertices[SoftIndex].UVs[UVChannelStart+j] = UVChannels[j][i];
+			Skel->GetImportedModel()->LODModels[LODIndex].Sections[SectionIndex].SoftVertices[SoftIndex].UVs[UVChannelStart+j] = FVector2f(UVChannels[j][i]);
 		}
 	}
 }
